@@ -1,0 +1,8 @@
+
+services:
+  sandbox:
+    build: .devcontainer/
+    image: titanproger/gcc_play_ground
+    volumes:
+      - ./:/workspaces/task2
+    working_dir: /workspaces/task2
