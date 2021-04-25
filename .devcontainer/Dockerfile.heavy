@@ -1,0 +1,71 @@
+# Pushed to hub.docker.com, image jengelen/finitefield
+
+FROM ubuntu:20.04
+
+ENV TZ=Europe/Moscow
+# needed for tz-data https://rtfm.co.ua/en/docker-configure-tzdata-and-timezone-during-build/
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+
+RUN apt-get update 
+
+RUN apt-get install -y \
+        wget
+
+RUN apt-get install -y \
+        build-essential \
+        git \
+        libgmp3-dev \
+        libgtest-dev \
+        libprocps-dev \
+        libssl-dev \
+        pkg-config 
+
+RUN wget -O cmake-Linux-x86_64.sh https://cmake.org/files/v3.10/cmake-3.10.3-Linux-x86_64.sh \
+    && sh ./cmake-Linux-x86_64.sh --prefix=/usr/local --skip-license \
+    && cmake --version \
+    && rm -f ./cmake-Linux-x86_64.sh
+
+# https://libntl.org/ntl-10.5.0.tar.gz
+# NTL takes a long time, so do this step as early as possible.
+RUN wget -O ntl.tar.xz http://www.shoup.net/ntl/ntl-10.5.0.tar.gz \
+    && mkdir ntl \
+    && tar -xf ntl.tar.* --strip 1 -C ntl \
+    && cd ntl/src \
+    && ./configure NTL_STD_CXX14=on \
+    && make \
+    && make install \
+    && cd ../.. \
+    && rm -rf ntl \
+    && rm -f ntl.*
+
+RUN apt-get install -y python-dev python3-dev
+RUN apt-get install -y libpthread-stubs0-dev
+RUN apt-get install -y libboost-all-dev
+
+RUN git clone --depth 1 --branch v0.1.1 https://github.com/scipr-lab/libff.git \ 
+    && mv libff/libff /usr/local/include/ \
+    && rm -rf libff
+
+
+# debug docker  run -it  71b762626ac4 /bin/bash
+RUN git clone https://github.com/google/googletest.git \
+    && mkdir gtest && cd gtest \        
+    && cmake ../googletest -DCMAKE_BUILD_TYPE=RELEASE \
+    && make \
+    && mv lib/libgtest* /usr/lib/ \
+    && cd .. \
+    && rm -rf gtest \
+    && git clone --recursive https://github.com/google/benchmark.git \
+    && git clone https://github.com/google/googletest.git benchmark/googletest \    
+    && cd benchmark \
+    && mkdir build && cd build \
+    && cmake .. -DCMAKE_BUILD_TYPE=RELEASE \
+    && make install \
+    && cd ../.. \
+    && rm -rf benchmark
+
+RUN apt-get install -y gdb
+
+# create user developer
+
+CMD ["/bin/bash"]
